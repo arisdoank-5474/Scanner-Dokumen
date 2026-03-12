@@ -3,122 +3,230 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Bulk Scanner Bisnis</title>
+    <title>Smart Bulk Scanner - Per Kolom</title>
+    
     <script src="https://cdn.jsdelivr.net/npm/tesseract.js@5/dist/tesseract.min.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
     
     <style>
-        body { font-family: 'Segoe UI', sans-serif; padding: 20px; background: #f8f9fa; }
-        .container { max-width: 600px; margin: auto; background: white; padding: 20px; border-radius: 15px; box-shadow: 0 4px 15px rgba(0,0,0,0.1); }
-        .btn-group { display: flex; gap: 10px; flex-wrap: wrap; margin-top: 15px; }
-        button { flex: 1; padding: 12px; border: none; border-radius: 8px; font-weight: bold; cursor: pointer; color: white; }
-        .btn-scan { background: #1a73e8; }
-        .btn-excel { background: #1d6f42; }
-        .btn-clear { background: #dc3545; }
-        #status { margin: 10px 0; font-weight: bold; color: #f39c12; }
-        table { width: 100%; border-collapse: collapse; margin-top: 20px; font-size: 14px; }
-        th, td { border: 1px solid #ddd; padding: 8px; text-align: left; }
-        th { background-color: #f2f2f2; }
-        .preview-img { width: 100px; border-radius: 5px; margin-top: 10px; display: none; }
+        body { 
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; 
+            padding: 15px; 
+            background: #f0f2f5; 
+            color: #333; 
+            line-height: 1.6;
+        }
+        .container { 
+            max-width: 800px; 
+            margin: auto; 
+            background: white; 
+            padding: 25px; 
+            border-radius: 15px; 
+            box-shadow: 0 8px 30px rgba(0,0,0,0.1); 
+        }
+        .header { text-align: center; margin-bottom: 25px; }
+        .header h2 { color: #1a73e8; margin-bottom: 5px; }
+        
+        /* Tombol Utama */
+        .btn-main { 
+            width: 100%; 
+            padding: 18px; 
+            background: #1a73e8; 
+            color: white; 
+            border: none; 
+            border-radius: 10px; 
+            font-size: 18px; 
+            font-weight: bold; 
+            cursor: pointer; 
+            transition: 0.3s;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 10px;
+        }
+        .btn-main:active { transform: scale(0.98); background: #1557b0; }
+
+        #status { 
+            text-align: center; 
+            margin: 15px 0; 
+            font-weight: 500;
+            color: #f39c12; 
+        }
+
+        /* Tabel Hasil */
+        .table-wrapper { 
+            margin-top: 20px; 
+            overflow-x: auto; 
+            border: 1px solid #ddd;
+            border-radius: 8px;
+        }
+        table { 
+            width: 100%; 
+            border-collapse: collapse; 
+            background: #fff; 
+            font-size: 13px; 
+        }
+        th, td { 
+            border-bottom: 1px solid #eee; 
+            padding: 12px; 
+            text-align: left; 
+            white-space: nowrap;
+        }
+        th { background: #f8f9fa; color: #555; }
+        tr:last-child td { border-bottom: none; }
+
+        /* Grup Tombol Bawah */
+        .controls { 
+            display: flex; 
+            gap: 10px; 
+            margin-top: 25px; 
+        }
+        .btn-excel { 
+            background: #28a745; 
+            flex: 2; 
+            color: white; 
+            border: none; 
+            padding: 15px; 
+            border-radius: 8px; 
+            cursor: pointer; 
+            font-weight: bold; 
+        }
+        .btn-del { 
+            background: #dc3545; 
+            flex: 1; 
+            color: white; 
+            border: none; 
+            padding: 15px; 
+            border-radius: 8px; 
+            cursor: pointer; 
+            font-weight: bold;
+        }
+        
+        .preview-box {
+            text-align: center;
+            margin-bottom: 15px;
+        }
+        #preview-img {
+            max-width: 150px;
+            border-radius: 8px;
+            display: none;
+            margin: auto;
+            border: 2px solid #ddd;
+        }
     </style>
 </head>
 <body>
 
 <div class="container">
-    <h2>Bulk Scanner Dokumen</h2>
-    <p>Foto dokumen satu per satu, lalu unduh semua sekaligus ke Excel.</p>
-    
+    <div class="header">
+        <h2>Scanner Dokumen Bisnis</h2>
+        <p>Hasil scan otomatis terbagi menjadi kolom-kolom Excel</p>
+    </div>
+
+    <div class="preview-box">
+        <img id="preview-img" src="">
+    </div>
+
     <input type="file" id="file-input" accept="image/*" capture="environment" style="display: none;">
     
-    <button class="btn-scan" onclick="document.getElementById('file-input').click()">📸 Scan Dokumen Baru</button>
-    <img id="preview" class="preview-img">
+    <button class="btn-main" onclick="document.getElementById('file-input').click()">
+        📸 AMBIL FOTO DOKUMEN
+    </button>
+    
     <div id="status">Siap memindai...</div>
 
-    <hr>
+    <div class="table-wrapper">
+        <table>
+            <thead>
+                <tr id="table-head">
+                    <th>No</th>
+                    <th>Kolom 1</th>
+                    <th>Kolom 2</th>
+                    <th>Kolom 3</th>
+                    <th>Kolom 4...</th>
+                </tr>
+            </thead>
+            <tbody id="table-body">
+                </tbody>
+        </table>
+    </div>
 
-    <h3>Daftar Rekap (<span id="count">0</span>)</h3>
-    <table id="recap-table">
-        <thead>
-            <tr>
-                <th>No</th>
-                <th>Waktu</th>
-                <th>Hasil Teks</th>
-            </tr>
-        </thead>
-        <tbody id="table-body">
-            </tbody>
-    </table>
-
-    <div class="btn-group">
-        <button class="btn-excel" onclick="downloadBulkExcel()">📊 Download Semua ke Excel</button>
-        <button class="btn-clear" onclick="clearData()">🗑️ Hapus Semua</button>
+    <div class="controls">
+        <button class="btn-excel" onclick="exportToExcel()">📊 DOWNLOAD EXCEL</button>
+        <button class="btn-del" onclick="resetTable()">🗑️ RESET</button>
     </div>
 </div>
 
 <script>
-    let allData = []; // Tempat menyimpan semua hasil scan
+    let finalData = []; // Array utama untuk menyimpan data per kolom
 
     const fileInput = document.getElementById('file-input');
     const statusDiv = document.getElementById('status');
     const tableBody = document.getElementById('table-body');
-    const countSpan = document.getElementById('count');
+    const previewImg = document.getElementById('preview-img');
 
     fileInput.onchange = (e) => {
         const file = e.target.files[0];
         if (!file) return;
 
-        statusDiv.innerText = "⏳ Sedang memproses... Jangan tutup aplikasi.";
+        // Tampilkan Preview Singkat
+        previewImg.src = URL.createObjectURL(file);
+        previewImg.style.display = 'block';
+
+        statusDiv.innerHTML = "⏳ Sedang memproses teks ke kolom... Mohon tunggu.";
         
         Tesseract.recognize(file, 'ind').then(({ data: { text } }) => {
-            const cleanText = text.trim();
-            const timestamp = new Date().toLocaleTimeString();
+            // 1. Pecah teks menjadi baris-baris
+            const lines = text.split('\n').filter(line => line.trim().length > 0);
             
-            // Simpan ke array data
-            allData.push({
-                waktu: timestamp,
-                isi: cleanText
+            lines.forEach(line => {
+                // 2. Pecah setiap baris menjadi KOLOM berdasarkan SPASI
+                // Regex /\s+/ menangani jika ada spasi lebih dari satu
+                const columns = line.trim().split(/\s+/); 
+                finalData.push(columns);
             });
 
-            updateTable();
-            statusDiv.innerText = "✅ Berhasil ditambahkan ke daftar!";
-            countSpan.innerText = allData.length;
+            renderTable();
+            statusDiv.innerHTML = "✅ " + lines.length + " baris berhasil ditambahkan!";
+        }).catch(err => {
+            statusDiv.innerHTML = "❌ Gagal membaca gambar.";
+            console.error(err);
         });
     };
 
-    function updateTable() {
+    // Fungsi menampilkan data ke tabel di layar HP
+    function renderTable() {
         tableBody.innerHTML = "";
-        allData.forEach((item, index) => {
-            let row = `<tr>
+        finalData.forEach((row, index) => {
+            let cells = row.map(col => `<td>${col}</td>`).join('');
+            let tr = `<tr>
                 <td>${index + 1}</td>
-                <td>${item.waktu}</td>
-                <td>${item.isi.substring(0, 50)}...</td>
+                ${cells}
             </tr>`;
-            tableBody.innerHTML += row;
+            tableBody.innerHTML += tr;
         });
     }
 
-    function downloadBulkExcel() {
-        if (allData.length === 0) return alert("Belum ada data untuk diunduh!");
+    // Fungsi membuat file Excel dari data per kolom
+    function exportToExcel() {
+        if (finalData.length === 0) return alert("Belum ada data untuk diunduh!");
 
-        // Format data untuk Excel: Header + Isi
-        const excelData = [
-            ["No", "Waktu Scan", "Hasil Rekap Dokumen"],
-            ...allData.map((d, i) => [i + 1, d.waktu, d.isi])
-        ];
-
-        const worksheet = XLSX.utils.aoa_to_sheet(excelData);
-        const workbook = XLSX.utils.book_new();
-        XLSX.utils.book_append_sheet(workbook, worksheet, "Rekap Bulk");
+        // Buat worksheet dari Array of Arrays (AoA)
+        const ws = XLSX.utils.aoa_to_sheet(finalData);
+        const wb = XLSX.utils.book_new();
+        XLSX.utils.book_append_sheet(wb, ws, "Rekap_Data");
         
-        XLSX.writeFile(workbook, `Bulk_Rekap_${new Date().toLocaleDateString()}.xlsx`);
+        // Unduh file
+        XLSX.writeFile(wb, `Rekap_Bisnis_${new Date().getTime()}.xlsx`);
     }
 
-    function clearData() {
-        if (confirm("Hapus semua data rekap saat ini?")) {
-            allData = [];
-            updateTable();
-            countSpan.innerText = "0";
-            statusDiv.innerText = "Data dihapus.";
+    // Fungsi menghapus semua data
+    function resetTable() {
+        if(confirm("Hapus semua data yang sudah di-scan?")) {
+            finalData = [];
+            tableBody.innerHTML = "";
+            previewImg.style.display = 'none';
+            statusDiv.innerHTML = "Data dibersihkan.";
         }
     }
 </script>
