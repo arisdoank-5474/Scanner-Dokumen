@@ -1,0 +1,92 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Rekap Bisnis Pro</title>
+    <script src="https://cdn.jsdelivr.net/npm/tesseract.js@5/dist/tesseract.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+    
+    <style>
+        body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; padding: 20px; background: #f0f2f5; color: #333; }
+        .container { max-width: 500px; margin: auto; background: white; padding: 25px; border-radius: 15px; box-shadow: 0 10px 25px rgba(0,0,0,0.1); }
+        h2 { color: #1a73e8; margin-bottom: 10px; }
+        #preview { width: 100%; border-radius: 10px; margin: 15px 0; display: none; border: 2px solid #ddd; }
+        .btn-group { display: flex; flex-direction: column; gap: 10px; margin-top: 15px; }
+        button { padding: 12px; border: none; border-radius: 8px; font-weight: bold; cursor: pointer; transition: 0.3s; }
+        .btn-scan { background: #1a73e8; color: white; }
+        .btn-wa { background: #25d366; color: white; display: none; }
+        .btn-excel { background: #1d6f42; color: white; display: none; }
+        #result { margin-top: 20px; text-align: left; white-space: pre-wrap; background: #f8f9fa; padding: 15px; border: 1px solid #dee2e6; border-radius: 8px; font-size: 14px; max-height: 200px; overflow-y: auto; }
+        .loading { color: #f39c12; font-weight: bold; margin: 10px 0; }
+    </style>
+</head>
+<body>
+
+<div class="container">
+    <h2>Rekap Dokumen Bisnis</h2>
+    <p>Pindai dokumen fisik menjadi data digital.</p>
+    
+    <input type="file" id="file-input" accept="image/*" capture="environment" style="display: none;">
+    
+    <div class="btn-group">
+        <button class="btn-scan" onclick="document.getElementById('file-input').click()">📸 Ambil Foto / Scan</button>
+        <img id="preview" src="">
+        <div id="status"></div>
+    </div>
+
+    <h3>Hasil Rekap:</h3>
+    <div id="result">Hasil scan akan muncul di sini...</div>
+
+    <div class="btn-group">
+        <button id="wa-btn" class="btn-wa" onclick="sendWA()">📲 Kirim ke WhatsApp</button>
+        <button id="excel-btn" class="btn-excel" onclick="downloadExcel()">📊 Simpan ke Excel</button>
+    </div>
+</div>
+
+<script>
+    let scannedText = "";
+    const fileInput = document.getElementById('file-input');
+    const resultDiv = document.getElementById('result');
+    const statusDiv = document.getElementById('status');
+
+    fileInput.onchange = (e) => {
+        const file = e.target.files[0];
+        if (!file) return;
+
+        document.getElementById('preview').src = URL.createObjectURL(file);
+        document.getElementById('preview').style.display = 'block';
+        
+        statusDiv.innerHTML = '<p class="loading">⏳ Memproses Dokumen...</p>';
+        
+        Tesseract.recognize(file, 'ind').then(({ data: { text } }) => {
+            scannedText = text.trim();
+            statusDiv.innerHTML = '<p style="color: green;">✅ Scan Berhasil!</p>';
+            resultDiv.innerText = scannedText;
+            
+            // Tampilkan tombol setelah scan selesai
+            document.getElementById('wa-btn').style.display = 'block';
+            document.getElementById('excel-btn').style.display = 'block';
+        });
+    };
+
+    function sendWA() {
+        const phone = "628123456789"; // Ganti dengan nomor WA Anda (gunakan kode negara)
+        const message = encodeURIComponent("*Hasil Rekap Dokumen:*\n\n" + scannedText);
+        window.open(`https://wa.me/${phone}?text=${message}`, '_blank');
+    }
+
+    function downloadExcel() {
+        // Membuat baris data sederhana dari hasil scan
+        const rows = scannedText.split('\n').map(line => [line]);
+        const worksheet = XLSX.utils.aoa_to_sheet([["Data Hasil Rekap"], ...rows]);
+        const workbook = XLSX.utils.book_new();
+        XLSX.utils.book_append_sheet(workbook, worksheet, "Rekap");
+        
+        // Simpan file
+        XLSX.writeFile(workbook, "Rekap_Dokumen.xlsx");
+    }
+</script>
+
+</body>
+</html>
