@@ -3,151 +3,64 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Smart Bulk Scanner - Per Kolom</title>
+    <title>Scanner Bisnis All-in-One</title>
     
     <script src="https://cdn.jsdelivr.net/npm/tesseract.js@5/dist/tesseract.min.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.4.120/pdf.min.js"></script>
     
     <style>
-        body { 
-            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; 
-            padding: 15px; 
-            background: #f0f2f5; 
-            color: #333; 
-            line-height: 1.6;
-        }
-        .container { 
-            max-width: 800px; 
-            margin: auto; 
-            background: white; 
-            padding: 25px; 
-            border-radius: 15px; 
-            box-shadow: 0 8px 30px rgba(0,0,0,0.1); 
-        }
+        body { font-family: 'Segoe UI', sans-serif; padding: 15px; background: #f0f2f5; color: #333; }
+        .container { max-width: 800px; margin: auto; background: white; padding: 25px; border-radius: 15px; box-shadow: 0 8px 30px rgba(0,0,0,0.1); }
         .header { text-align: center; margin-bottom: 25px; }
-        .header h2 { color: #1a73e8; margin-bottom: 5px; }
+        .header h2 { color: #1a73e8; }
         
-        /* Tombol Utama */
         .btn-main { 
-            width: 100%; 
-            padding: 18px; 
-            background: #1a73e8; 
-            color: white; 
-            border: none; 
-            border-radius: 10px; 
-            font-size: 18px; 
-            font-weight: bold; 
-            cursor: pointer; 
-            transition: 0.3s;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            gap: 10px;
-        }
-        .btn-main:active { transform: scale(0.98); background: #1557b0; }
-
-        #status { 
-            text-align: center; 
-            margin: 15px 0; 
-            font-weight: 500;
-            color: #f39c12; 
+            width: 100%; padding: 18px; background: #1a73e8; color: white; border: none; 
+            border-radius: 10px; font-size: 18px; font-weight: bold; cursor: pointer;
         }
 
-        /* Tabel Hasil */
-        .table-wrapper { 
-            margin-top: 20px; 
-            overflow-x: auto; 
-            border: 1px solid #ddd;
-            border-radius: 8px;
-        }
-        table { 
-            width: 100%; 
-            border-collapse: collapse; 
-            background: #fff; 
-            font-size: 13px; 
-        }
-        th, td { 
-            border-bottom: 1px solid #eee; 
-            padding: 12px; 
-            text-align: left; 
-            white-space: nowrap;
-        }
-        th { background: #f8f9fa; color: #555; }
-        tr:last-child td { border-bottom: none; }
+        #status { text-align: center; margin: 15px 0; font-weight: 500; color: #f39c12; }
 
-        /* Grup Tombol Bawah */
-        .controls { 
-            display: flex; 
-            gap: 10px; 
-            margin-top: 25px; 
-        }
-        .btn-excel { 
-            background: #28a745; 
-            flex: 2; 
-            color: white; 
-            border: none; 
-            padding: 15px; 
-            border-radius: 8px; 
-            cursor: pointer; 
-            font-weight: bold; 
-        }
-        .btn-del { 
-            background: #dc3545; 
-            flex: 1; 
-            color: white; 
-            border: none; 
-            padding: 15px; 
-            border-radius: 8px; 
-            cursor: pointer; 
-            font-weight: bold;
-        }
+        .table-wrapper { margin-top: 20px; overflow-x: auto; border: 1px solid #ddd; border-radius: 8px; }
+        table { width: 100%; border-collapse: collapse; background: #fff; font-size: 13px; }
+        th, td { border-bottom: 1px solid #eee; padding: 12px; text-align: left; }
+        th { background: #f8f9fa; }
+
+        .controls { display: flex; gap: 10px; margin-top: 25px; }
+        .btn-excel { background: #28a745; flex: 2; color: white; border: none; padding: 15px; border-radius: 8px; font-weight: bold; cursor: pointer; }
+        .btn-del { background: #dc3545; flex: 1; color: white; border: none; padding: 15px; border-radius: 8px; font-weight: bold; cursor: pointer; }
         
-        .preview-box {
-            text-align: center;
-            margin-bottom: 15px;
-        }
-        #preview-img {
-            max-width: 150px;
-            border-radius: 8px;
-            display: none;
-            margin: auto;
-            border: 2px solid #ddd;
-        }
+        #preview-canvas { display: none; width: 100%; max-width: 200px; margin: 10px auto; border: 1px solid #ccc; }
     </style>
 </head>
 <body>
 
 <div class="container">
     <div class="header">
-        <h2>Scanner Dokumen Bisnis</h2>
-        <p>Hasil scan otomatis terbagi menjadi kolom-kolom Excel</p>
+        <h2>Scanner Bisnis Pro</h2>
+        <p>Support: Kamera, Gambar (JPG/PNG), & PDF</p>
     </div>
 
-    <div class="preview-box">
-        <img id="preview-img" src="">
-    </div>
+    <canvas id="preview-canvas"></canvas>
 
-    <input type="file" id="file-input" accept="image/*" capture="environment" style="display: none;">
+    <input type="file" id="file-input" accept="image/*,application/pdf" style="display: none;">
     
     <button class="btn-main" onclick="document.getElementById('file-input').click()">
-        📸 AMBIL FOTO DOKUMEN
+        📂 UPLOAD / SCAN DOKUMEN
     </button>
     
-    <div id="status">Siap memindai...</div>
+    <div id="status">Siap memproses...</div>
 
     <div class="table-wrapper">
         <table>
             <thead>
-                <tr id="table-head">
+                <tr>
                     <th>No</th>
-                    <th>Kolom 1</th>
-                    <th>Kolom 2</th>
-                    <th>Kolom 3</th>
-                    <th>Kolom 4...</th>
+                    <th>Data Per Kolom</th>
                 </tr>
             </thead>
-            <tbody id="table-body">
-                </tbody>
+            <tbody id="table-body"></tbody>
         </table>
     </div>
 
@@ -158,75 +71,89 @@
 </div>
 
 <script>
-    let finalData = []; // Array utama untuk menyimpan data per kolom
+    // Konfigurasi PDF.js worker
+    pdfjsLib.GlobalWorkerOptions.workerSrc = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.4.120/pdf.worker.min.js';
 
+    let finalData = [];
     const fileInput = document.getElementById('file-input');
     const statusDiv = document.getElementById('status');
     const tableBody = document.getElementById('table-body');
-    const previewImg = document.getElementById('preview-img');
+    const canvas = document.getElementById('preview-canvas');
 
-    fileInput.onchange = (e) => {
+    fileInput.onchange = async (e) => {
         const file = e.target.files[0];
         if (!file) return;
 
-        // Tampilkan Preview Singkat
-        previewImg.src = URL.createObjectURL(file);
-        previewImg.style.display = 'block';
+        statusDiv.innerHTML = "⏳ Membaca file...";
 
-        statusDiv.innerHTML = "⏳ Sedang memproses teks ke kolom... Mohon tunggu.";
-        
-        Tesseract.recognize(file, 'ind').then(({ data: { text } }) => {
-            // 1. Pecah teks menjadi baris-baris
-            const lines = text.split('\n').filter(line => line.trim().length > 0);
-            
-            lines.forEach(line => {
-                // 2. Pecah setiap baris menjadi KOLOM berdasarkan SPASI
-                // Regex /\s+/ menangani jika ada spasi lebih dari satu
-                const columns = line.trim().split(/\s+/); 
-                finalData.push(columns);
-            });
-
-            renderTable();
-            statusDiv.innerHTML = "✅ " + lines.length + " baris berhasil ditambahkan!";
-        }).catch(err => {
-            statusDiv.innerHTML = "❌ Gagal membaca gambar.";
-            console.error(err);
-        });
+        if (file.type === "application/pdf") {
+            processPDF(file);
+        } else {
+            processImage(file);
+        }
     };
 
-    // Fungsi menampilkan data ke tabel di layar HP
+    // Fungsi untuk memproses Gambar
+    function processImage(source) {
+        statusDiv.innerHTML = "⏳ OCR sedang bekerja...";
+        Tesseract.recognize(source, 'ind').then(({ data: { text } }) => {
+            handleTextExtraction(text);
+        });
+    }
+
+    // Fungsi untuk memproses PDF (Halaman Pertama)
+    async function processPDF(file) {
+        const reader = new FileReader();
+        reader.onload = async function() {
+            const typedarray = new Uint8Array(this.result);
+            const pdf = await pdfjsLib.getDocument(typedarray).promise;
+            const page = await pdf.getPage(1); // Ambil halaman 1
+            
+            const viewport = page.getViewport({ scale: 2 });
+            const context = canvas.getContext('2d');
+            canvas.height = viewport.height;
+            canvas.width = viewport.width;
+
+            await page.render({ canvasContext: context, viewport: viewport }).promise;
+            
+            // Ubah canvas menjadi data gambar untuk Tesseract
+            processImage(canvas.toDataURL());
+        };
+        reader.readAsArrayBuffer(file);
+    }
+
+    // Logika pemisahan kolom
+    function handleTextExtraction(text) {
+        const lines = text.split('\n').filter(line => line.trim().length > 0);
+        lines.forEach(line => {
+            const columns = line.trim().split(/\s+/); 
+            finalData.push(columns);
+        });
+        renderTable();
+        statusDiv.innerHTML = "✅ Berhasil ditambahkan!";
+    }
+
     function renderTable() {
         tableBody.innerHTML = "";
         finalData.forEach((row, index) => {
             let cells = row.map(col => `<td>${col}</td>`).join('');
-            let tr = `<tr>
-                <td>${index + 1}</td>
-                ${cells}
-            </tr>`;
-            tableBody.innerHTML += tr;
+            tableBody.innerHTML += `<tr><td>${index + 1}</td>${cells}</tr>`;
         });
     }
 
-    // Fungsi membuat file Excel dari data per kolom
     function exportToExcel() {
-        if (finalData.length === 0) return alert("Belum ada data untuk diunduh!");
-
-        // Buat worksheet dari Array of Arrays (AoA)
+        if (finalData.length === 0) return alert("Data kosong!");
         const ws = XLSX.utils.aoa_to_sheet(finalData);
         const wb = XLSX.utils.book_new();
-        XLSX.utils.book_append_sheet(wb, ws, "Rekap_Data");
-        
-        // Unduh file
-        XLSX.writeFile(wb, `Rekap_Bisnis_${new Date().getTime()}.xlsx`);
+        XLSX.utils.book_append_sheet(wb, ws, "Rekap");
+        XLSX.writeFile(wb, "Rekap_All_Files.xlsx");
     }
 
-    // Fungsi menghapus semua data
     function resetTable() {
-        if(confirm("Hapus semua data yang sudah di-scan?")) {
+        if(confirm("Hapus data?")) {
             finalData = [];
             tableBody.innerHTML = "";
-            previewImg.style.display = 'none';
-            statusDiv.innerHTML = "Data dibersihkan.";
+            statusDiv.innerHTML = "Bersih.";
         }
     }
 </script>
