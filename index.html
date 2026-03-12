@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Scanner Bisnis All-in-One</title>
+    <title>Scanner Bisnis Pro (Multi-Page)</title>
     
     <script src="https://cdn.jsdelivr.net/npm/tesseract.js@5/dist/tesseract.min.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
@@ -13,25 +13,16 @@
         body { font-family: 'Segoe UI', sans-serif; padding: 15px; background: #f0f2f5; color: #333; }
         .container { max-width: 800px; margin: auto; background: white; padding: 25px; border-radius: 15px; box-shadow: 0 8px 30px rgba(0,0,0,0.1); }
         .header { text-align: center; margin-bottom: 25px; }
-        .header h2 { color: #1a73e8; }
-        
-        .btn-main { 
-            width: 100%; padding: 18px; background: #1a73e8; color: white; border: none; 
-            border-radius: 10px; font-size: 18px; font-weight: bold; cursor: pointer;
-        }
-
+        .btn-main { width: 100%; padding: 18px; background: #1a73e8; color: white; border: none; border-radius: 10px; font-size: 18px; font-weight: bold; cursor: pointer; }
         #status { text-align: center; margin: 15px 0; font-weight: 500; color: #f39c12; }
-
         .table-wrapper { margin-top: 20px; overflow-x: auto; border: 1px solid #ddd; border-radius: 8px; }
-        table { width: 100%; border-collapse: collapse; background: #fff; font-size: 13px; }
-        th, td { border-bottom: 1px solid #eee; padding: 12px; text-align: left; }
+        table { width: 100%; border-collapse: collapse; background: #fff; font-size: 12px; }
+        th, td { border-bottom: 1px solid #eee; padding: 10px; text-align: left; }
         th { background: #f8f9fa; }
-
         .controls { display: flex; gap: 10px; margin-top: 25px; }
         .btn-excel { background: #28a745; flex: 2; color: white; border: none; padding: 15px; border-radius: 8px; font-weight: bold; cursor: pointer; }
         .btn-del { background: #dc3545; flex: 1; color: white; border: none; padding: 15px; border-radius: 8px; font-weight: bold; cursor: pointer; }
-        
-        #preview-canvas { display: none; width: 100%; max-width: 200px; margin: 10px auto; border: 1px solid #ccc; }
+        canvas { display: none; } /* Canvas untuk proses internal */
     </style>
 </head>
 <body>
@@ -39,16 +30,11 @@
 <div class="container">
     <div class="header">
         <h2>Scanner Bisnis Pro</h2>
-        <p>Support: Kamera, Gambar (JPG/PNG), & PDF</p>
+        <p>Support Multi-halaman PDF, Gambar & Kamera</p>
     </div>
 
-    <canvas id="preview-canvas"></canvas>
-
     <input type="file" id="file-input" accept="image/*,application/pdf" style="display: none;">
-    
-    <button class="btn-main" onclick="document.getElementById('file-input').click()">
-        📂 UPLOAD / SCAN DOKUMEN
-    </button>
+    <button class="btn-main" onclick="document.getElementById('file-input').click()">📂 UPLOAD / SCAN FILE</button>
     
     <div id="status">Siap memproses...</div>
 
@@ -57,7 +43,7 @@
             <thead>
                 <tr>
                     <th>No</th>
-                    <th>Data Per Kolom</th>
+                    <th>Data (Per Kolom)</th>
                 </tr>
             </thead>
             <tbody id="table-body"></tbody>
@@ -71,58 +57,62 @@
 </div>
 
 <script>
-    // Konfigurasi PDF.js worker
     pdfjsLib.GlobalWorkerOptions.workerSrc = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.4.120/pdf.worker.min.js';
 
     let finalData = [];
     const fileInput = document.getElementById('file-input');
     const statusDiv = document.getElementById('status');
     const tableBody = document.getElementById('table-body');
-    const canvas = document.getElementById('preview-canvas');
 
     fileInput.onchange = async (e) => {
         const file = e.target.files[0];
         if (!file) return;
 
-        statusDiv.innerHTML = "⏳ Membaca file...";
+        statusDiv.innerHTML = "⏳ Memulai pemrosesan...";
 
         if (file.type === "application/pdf") {
-            processPDF(file);
+            await processFullPDF(file);
         } else {
-            processImage(file);
+            await processImage(file);
         }
     };
 
-    // Fungsi untuk memproses Gambar
-    function processImage(source) {
-        statusDiv.innerHTML = "⏳ OCR sedang bekerja...";
-        Tesseract.recognize(source, 'ind').then(({ data: { text } }) => {
-            handleTextExtraction(text);
-        });
+    // Fungsi OCR dasar
+    async function processImage(source) {
+        const worker = await Tesseract.createWorker('ind');
+        const { data: { text } } = await worker.recognize(source);
+        handleTextExtraction(text);
+        await worker.terminate();
     }
 
-    // Fungsi untuk memproses PDF (Halaman Pertama)
-    async function processPDF(file) {
+    // Fungsi untuk memproses SEMUA halaman PDF
+    async function processFullPDF(file) {
         const reader = new FileReader();
         reader.onload = async function() {
             const typedarray = new Uint8Array(this.result);
             const pdf = await pdfjsLib.getDocument(typedarray).promise;
-            const page = await pdf.getPage(1); // Ambil halaman 1
-            
-            const viewport = page.getViewport({ scale: 2 });
-            const context = canvas.getContext('2d');
-            canvas.height = viewport.height;
-            canvas.width = viewport.width;
+            const totalPages = pdf.numPages;
 
-            await page.render({ canvasContext: context, viewport: viewport }).promise;
-            
-            // Ubah canvas menjadi data gambar untuk Tesseract
-            processImage(canvas.toDataURL());
+            for (let i = 1; i <= totalPages; i++) {
+                statusDiv.innerHTML = `⏳ Memproses halaman ${i} dari ${totalPages}...`;
+                
+                const page = await pdf.getPage(i);
+                const viewport = page.getViewport({ scale: 2 });
+                const canvas = document.createElement('canvas'); // Buat canvas baru tiap halaman
+                const context = canvas.getContext('2d');
+                canvas.height = viewport.height;
+                canvas.width = viewport.width;
+
+                await page.render({ canvasContext: context, viewport: viewport }).promise;
+                
+                // OCR pada halaman ini
+                await processImage(canvas.toDataURL('image/png'));
+            }
+            statusDiv.innerHTML = `✅ Selesai! ${totalPages} halaman diproses.`;
         };
         reader.readAsArrayBuffer(file);
     }
 
-    // Logika pemisahan kolom
     function handleTextExtraction(text) {
         const lines = text.split('\n').filter(line => line.trim().length > 0);
         lines.forEach(line => {
@@ -130,7 +120,6 @@
             finalData.push(columns);
         });
         renderTable();
-        statusDiv.innerHTML = "✅ Berhasil ditambahkan!";
     }
 
     function renderTable() {
@@ -145,15 +134,15 @@
         if (finalData.length === 0) return alert("Data kosong!");
         const ws = XLSX.utils.aoa_to_sheet(finalData);
         const wb = XLSX.utils.book_new();
-        XLSX.utils.book_append_sheet(wb, ws, "Rekap");
-        XLSX.writeFile(wb, "Rekap_All_Files.xlsx");
+        XLSX.utils.book_append_sheet(wb, ws, "Rekap_Lengkap");
+        XLSX.writeFile(wb, "Rekap_Bisnis_Full.xlsx");
     }
 
     function resetTable() {
-        if(confirm("Hapus data?")) {
+        if(confirm("Hapus semua data?")) {
             finalData = [];
             tableBody.innerHTML = "";
-            statusDiv.innerHTML = "Bersih.";
+            statusDiv.innerHTML = "Siap.";
         }
     }
 </script>
