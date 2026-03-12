@@ -3,88 +3,123 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Rekap Bisnis Pro</title>
+    <title>Bulk Scanner Bisnis</title>
     <script src="https://cdn.jsdelivr.net/npm/tesseract.js@5/dist/tesseract.min.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
     
     <style>
-        body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; padding: 20px; background: #f0f2f5; color: #333; }
-        .container { max-width: 500px; margin: auto; background: white; padding: 25px; border-radius: 15px; box-shadow: 0 10px 25px rgba(0,0,0,0.1); }
-        h2 { color: #1a73e8; margin-bottom: 10px; }
-        #preview { width: 100%; border-radius: 10px; margin: 15px 0; display: none; border: 2px solid #ddd; }
-        .btn-group { display: flex; flex-direction: column; gap: 10px; margin-top: 15px; }
-        button { padding: 12px; border: none; border-radius: 8px; font-weight: bold; cursor: pointer; transition: 0.3s; }
-        .btn-scan { background: #1a73e8; color: white; }
-        .btn-wa { background: #25d366; color: white; display: none; }
-        .btn-excel { background: #1d6f42; color: white; display: none; }
-        #result { margin-top: 20px; text-align: left; white-space: pre-wrap; background: #f8f9fa; padding: 15px; border: 1px solid #dee2e6; border-radius: 8px; font-size: 14px; max-height: 200px; overflow-y: auto; }
-        .loading { color: #f39c12; font-weight: bold; margin: 10px 0; }
+        body { font-family: 'Segoe UI', sans-serif; padding: 20px; background: #f8f9fa; }
+        .container { max-width: 600px; margin: auto; background: white; padding: 20px; border-radius: 15px; box-shadow: 0 4px 15px rgba(0,0,0,0.1); }
+        .btn-group { display: flex; gap: 10px; flex-wrap: wrap; margin-top: 15px; }
+        button { flex: 1; padding: 12px; border: none; border-radius: 8px; font-weight: bold; cursor: pointer; color: white; }
+        .btn-scan { background: #1a73e8; }
+        .btn-excel { background: #1d6f42; }
+        .btn-clear { background: #dc3545; }
+        #status { margin: 10px 0; font-weight: bold; color: #f39c12; }
+        table { width: 100%; border-collapse: collapse; margin-top: 20px; font-size: 14px; }
+        th, td { border: 1px solid #ddd; padding: 8px; text-align: left; }
+        th { background-color: #f2f2f2; }
+        .preview-img { width: 100px; border-radius: 5px; margin-top: 10px; display: none; }
     </style>
 </head>
 <body>
 
 <div class="container">
-    <h2>Rekap Dokumen Bisnis</h2>
-    <p>Pindai dokumen fisik menjadi data digital.</p>
+    <h2>Bulk Scanner Dokumen</h2>
+    <p>Foto dokumen satu per satu, lalu unduh semua sekaligus ke Excel.</p>
     
     <input type="file" id="file-input" accept="image/*" capture="environment" style="display: none;">
     
-    <div class="btn-group">
-        <button class="btn-scan" onclick="document.getElementById('file-input').click()">📸 Ambil Foto / Scan</button>
-        <img id="preview" src="">
-        <div id="status"></div>
-    </div>
+    <button class="btn-scan" onclick="document.getElementById('file-input').click()">📸 Scan Dokumen Baru</button>
+    <img id="preview" class="preview-img">
+    <div id="status">Siap memindai...</div>
 
-    <h3>Hasil Rekap:</h3>
-    <div id="result">Hasil scan akan muncul di sini...</div>
+    <hr>
+
+    <h3>Daftar Rekap (<span id="count">0</span>)</h3>
+    <table id="recap-table">
+        <thead>
+            <tr>
+                <th>No</th>
+                <th>Waktu</th>
+                <th>Hasil Teks</th>
+            </tr>
+        </thead>
+        <tbody id="table-body">
+            </tbody>
+    </table>
 
     <div class="btn-group">
-        <button id="wa-btn" class="btn-wa" onclick="sendWA()">📲 Kirim ke WhatsApp</button>
-        <button id="excel-btn" class="btn-excel" onclick="downloadExcel()">📊 Simpan ke Excel</button>
+        <button class="btn-excel" onclick="downloadBulkExcel()">📊 Download Semua ke Excel</button>
+        <button class="btn-clear" onclick="clearData()">🗑️ Hapus Semua</button>
     </div>
 </div>
 
 <script>
-    let scannedText = "";
+    let allData = []; // Tempat menyimpan semua hasil scan
+
     const fileInput = document.getElementById('file-input');
-    const resultDiv = document.getElementById('result');
     const statusDiv = document.getElementById('status');
+    const tableBody = document.getElementById('table-body');
+    const countSpan = document.getElementById('count');
 
     fileInput.onchange = (e) => {
         const file = e.target.files[0];
         if (!file) return;
 
-        document.getElementById('preview').src = URL.createObjectURL(file);
-        document.getElementById('preview').style.display = 'block';
-        
-        statusDiv.innerHTML = '<p class="loading">⏳ Memproses Dokumen...</p>';
+        statusDiv.innerText = "⏳ Sedang memproses... Jangan tutup aplikasi.";
         
         Tesseract.recognize(file, 'ind').then(({ data: { text } }) => {
-            scannedText = text.trim();
-            statusDiv.innerHTML = '<p style="color: green;">✅ Scan Berhasil!</p>';
-            resultDiv.innerText = scannedText;
+            const cleanText = text.trim();
+            const timestamp = new Date().toLocaleTimeString();
             
-            // Tampilkan tombol setelah scan selesai
-            document.getElementById('wa-btn').style.display = 'block';
-            document.getElementById('excel-btn').style.display = 'block';
+            // Simpan ke array data
+            allData.push({
+                waktu: timestamp,
+                isi: cleanText
+            });
+
+            updateTable();
+            statusDiv.innerText = "✅ Berhasil ditambahkan ke daftar!";
+            countSpan.innerText = allData.length;
         });
     };
 
-    function sendWA() {
-        const phone = "628123456789"; // Ganti dengan nomor WA Anda (gunakan kode negara)
-        const message = encodeURIComponent("*Hasil Rekap Dokumen:*\n\n" + scannedText);
-        window.open(`https://wa.me/${phone}?text=${message}`, '_blank');
+    function updateTable() {
+        tableBody.innerHTML = "";
+        allData.forEach((item, index) => {
+            let row = `<tr>
+                <td>${index + 1}</td>
+                <td>${item.waktu}</td>
+                <td>${item.isi.substring(0, 50)}...</td>
+            </tr>`;
+            tableBody.innerHTML += row;
+        });
     }
 
-    function downloadExcel() {
-        // Membuat baris data sederhana dari hasil scan
-        const rows = scannedText.split('\n').map(line => [line]);
-        const worksheet = XLSX.utils.aoa_to_sheet([["Data Hasil Rekap"], ...rows]);
+    function downloadBulkExcel() {
+        if (allData.length === 0) return alert("Belum ada data untuk diunduh!");
+
+        // Format data untuk Excel: Header + Isi
+        const excelData = [
+            ["No", "Waktu Scan", "Hasil Rekap Dokumen"],
+            ...allData.map((d, i) => [i + 1, d.waktu, d.isi])
+        ];
+
+        const worksheet = XLSX.utils.aoa_to_sheet(excelData);
         const workbook = XLSX.utils.book_new();
-        XLSX.utils.book_append_sheet(workbook, worksheet, "Rekap");
+        XLSX.utils.book_append_sheet(workbook, worksheet, "Rekap Bulk");
         
-        // Simpan file
-        XLSX.writeFile(workbook, "Rekap_Dokumen.xlsx");
+        XLSX.writeFile(workbook, `Bulk_Rekap_${new Date().toLocaleDateString()}.xlsx`);
+    }
+
+    function clearData() {
+        if (confirm("Hapus semua data rekap saat ini?")) {
+            allData = [];
+            updateTable();
+            countSpan.innerText = "0";
+            statusDiv.innerText = "Data dihapus.";
+        }
     }
 </script>
 
